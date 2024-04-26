@@ -6,6 +6,8 @@
 
 module Main where
 
+import Core.Id (Id (Id))
+
 import Control.Monad.Reader (void)
 import Control.Monad.State (
   MonadState,
@@ -14,56 +16,9 @@ import Control.Monad.State (
   modify,
  )
 import Control.Monad.Trans
+import Core.BankAccount (BankAccount (..), BankAccountHolderId (HumanId), BankAccountId)
 import Data.Foldable (find)
-import Data.Text (Text)
-
--- Define IDs for different entities
-newtype Id a = Id Int deriving (Show, Eq, Ord)
-
-type HumanId = Id Human
-type OrganizationId = Id Organization
-type BankAccountId = Id BankAccount
-
-data AccountHolderId
-  = HumanId HumanId
-  | OrganizationId OrganizationId
-  deriving (Show, Eq)
-
--- Define data structures
-data BankAccount = BankAccount
-  { accountNumber :: BankAccountId
-  , balanceCents :: Int
-  , accountHolderId :: AccountHolderId
-  }
-  deriving (Show, Eq)
-
-data Human = Human
-  { humanName :: Text
-  , humanId :: HumanId
-  }
-  deriving (Show, Eq)
-
-data Organization = Organization
-  { organizationName :: Text
-  , organizationId :: OrganizationId
-  , organizationHumanIds :: [HumanId]
-  }
-  deriving (Show, Eq)
-
-data User
-  = HumanUser Human
-  | OrganizationUser Organization
-  deriving (Show, Eq)
-
-class (Monad m) => UserRepository m where
-  createUser :: User -> m ()
-  getUserById :: HumanId -> m (Maybe User)
-  getAllHumansInOrganization :: OrganizationId -> m [Human]
-
-class (Monad m) => BankAccountRepository m where
-  createAccount :: BankAccount -> m ()
-  getAccountById :: BankAccountId -> m (Maybe BankAccount)
-  getAccountsForUser :: AccountHolderId -> m [BankAccount]
+import Services.BankAccountRepository (BankAccountRepository (..))
 
 ------------------------------------------------------------
 -- Providers layer
@@ -93,10 +48,10 @@ instance BankAccountRepository InMemoryBankAccountRepository where
     gets $ find ((== idToFind) . accountNumber)
 
   getAccountsForUser ::
-    AccountHolderId ->
+    BankAccountHolderId ->
     InMemoryBankAccountRepository [BankAccount]
   getAccountsForUser idToFind =
-    gets (filter ((== idToFind) . accountHolderId))
+    gets (filter ((== idToFind) . bankAccountHolderId))
 
 ------------------------------------------------------------
 -- Main
@@ -107,7 +62,7 @@ someData =
   BankAccount
     { accountNumber = Id 123
     , balanceCents = 10000
-    , accountHolderId = HumanId $ Id 987
+    , bankAccountHolderId = HumanId $ Id 987
     }
 
 modifyAndPrint :: InMemoryBankAccountAction ()
