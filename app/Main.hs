@@ -1,10 +1,23 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import Control.Monad.Reader (Reader, ReaderT)
+import Control.Monad.Reader (void)
+import Control.Monad.State (
+  MonadState (get),
+  StateT (runStateT),
+  gets,
+  modify,
+ )
+import Control.Monad.Trans
+import Data.Foldable (find)
 
 newtype Id = Id {getId :: Int}
+  deriving (Show, Eq)
 
 ------------------------------------------------------------
 -- Core layer
@@ -15,24 +28,60 @@ data BankAccount = BankAccount
   , balanceCents :: Int
   , ownerId :: Id
   }
+  deriving (Show, Eq)
 
 ------------------------------------------------------------
 -- Services layer
 ------------------------------------------------------------
 
--- Reader Env for Postgres
-data PostgresEnv = PostgresEnv {}
+class (Monad m) => BankAccountPersistenceService m where
+  createAccount :: BankAccount -> m ()
+  getAccountById :: Id -> m (Maybe BankAccount)
 
--- Marker type for the capacity to be used with database operations
-class Persistable a
+------------------------------------------------------------
+-- Providers layer
+------------------------------------------------------------
 
--- Declare that PostgresEnv implements Persistable
-instance Persistable PostgresEnv
+type InMemoryBankAccountAction a = StateT [BankAccount] IO a
 
--- BankAccountPersistence type class for types a that are Persistable
-class (Persistable a) => BankAccountPersistence a where
-  createAccount :: BankAccount -> ReaderT a IO ()
-  getAccountById :: Id -> ReaderT a IO BankAccount
+newtype InMemoryBankAccountPersistence a = InMemoryBankAccountPersistence
+  { runInMemoryBankAccountPersistence :: InMemoryBankAccountAction a
+  }
+  deriving
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadState [BankAccount]
+    , MonadIO
+    )
+
+instance BankAccountPersistenceService InMemoryBankAccountPersistence where
+  createAccount :: BankAccount -> InMemoryBankAccountPersistence ()
+  createAccount = modify . (:)
+
+  getAccountById :: Id -> InMemoryBankAccountPersistence (Maybe BankAccount)
+  getAccountById idToFind = gets $ find findById
+   where
+    findById :: BankAccount -> Bool
+    findById = (== idToFind) . accountNumber
+
+------------------------------------------------------------
+-- Main
+------------------------------------------------------------
+
+someData :: BankAccount
+someData =
+  BankAccount
+    { accountNumber = Id 123
+    , balanceCents = 10000
+    , ownerId = Id 987
+    }
+
+modifyAndPrint :: InMemoryBankAccountAction ()
+modifyAndPrint = runInMemoryBankAccountPersistence $ do
+  createAccount someData
+  get >>= liftIO . print
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+  void $ runStateT modifyAndPrint []
