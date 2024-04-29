@@ -70,6 +70,7 @@ executable di-haskell
                     , Services.UserRepository
                     , Services.BankAccountRepository
                     , Providers.InMemoryBankAccountRepository
+                    , Providers.PostgresUserRepository
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -78,6 +79,7 @@ executable di-haskell
     build-depends:    base ^>=4.17.2.1
                       , mtl
                       , text
+                      , postgresql-simple
 
     -- Directories containing source files.
     hs-source-dirs:   app
