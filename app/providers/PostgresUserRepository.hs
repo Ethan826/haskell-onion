@@ -1,9 +1,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Providers.PostgresUserRepository where
 
 import Control.Monad.Reader (MonadReader, ReaderT, asks)
 import Core.User (User)
+import Data.ByteString.UTF8 (fromString)
+import Database.PostgreSQL.Simple
 import Services.UserRepository (UserRepository (..))
 
 data PostgresUserRepositoryEnv = PostgresUserRepositoryEnv
@@ -23,13 +27,20 @@ newtype PostgresUserRepository a = PostgresUserRepository
     , MonadReader PostgresUserRepositoryEnv
     )
 
+query = "INSERT INTO users ()"
+
 instance UserRepository PostgresUserRepository where
+  createUser :: User -> PostgresUserRepository ()
   createUser user = do
     connectionString <-
       asks postgresUserRepositoryEnvConnectionString
 
-    let x = 3
+    let conn = connectPostgreSQL $ fromString connectionString
 
     pure ()
 
--- ‘getUserById’ and ‘getAllHumansInOrganization’
+hello :: IO Int
+hello = do
+  conn <- connectPostgreSQL ""
+  [Only i] <- query_ conn "select 2 + 2"
+  return i

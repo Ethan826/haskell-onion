@@ -80,6 +80,8 @@ executable di-haskell
                       , mtl
                       , text
                       , postgresql-simple
+                      , bytestring
+                      , utf8-string
 
     -- Directories containing source files.
     hs-source-dirs:   app
