@@ -4,7 +4,7 @@
 
 module Core.Human where
 
-import Core.Id
+import Core.Id (Id)
 import Data.Text (Text)
 
 type HumanId = Id Human

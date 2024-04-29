@@ -6,15 +6,20 @@
 module Main where
 
 import Core.Id (Id (Id))
+import Providers.PostgresUserRepository (
+  PostgresUserRepository (runPostgresUserRepository),
+  PostgresUserRepositoryEnv (
+    PostgresUserRepositoryEnv,
+    postgresUserRepositoryEnvConnectionString
+  ),
+ )
 
-import Control.Monad.Reader (forM_, void)
-import Control.Monad.State (StateT (runStateT))
+import Control.Monad.Reader (ReaderT (runReaderT))
 import Control.Monad.Trans
 import Core.BankAccount (
   BankAccount (..),
   BankAccountHolderId (HumanId),
  )
-import Database.PostgreSQL.Simple (Only (Only, fromOnly), connectPostgreSQL, query_)
 import Providers.InMemoryBankAccountRepository (
   InMemoryBankAccountAction,
   InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
@@ -22,6 +27,7 @@ import Providers.InMemoryBankAccountRepository (
 import Services.BankAccountRepository (
   BankAccountRepository (..),
  )
+import Services.UserRepository (UserRepository (getAllHumansInOrganization, getUserById))
 
 someData :: BankAccount
 someData =
@@ -37,12 +43,25 @@ modifyAndPrint = runInMemoryBankAccountRepository $ do
   account <- getAccountById (Id 123)
   liftIO $ print account
 
+-- TODO: Get from env
+env :: PostgresUserRepositoryEnv
+env =
+  PostgresUserRepositoryEnv
+    { postgresUserRepositoryEnvConnectionString =
+        "postgresql://ethan@localhost:5432/ethan"
+    }
+
 main :: IO ()
 main = do
-  conn <- connectPostgreSQL "postgresql://ethan@localhost:5432/ethan"
-  xs :: [Only Int] <- query_ conn "SELECT id FROM users"
-  forM_ xs (print . fromOnly)
+  let getUserByIdAction = runPostgresUserRepository $ getUserById userId
+  user <- runReaderT getUserByIdAction env
+  print user
 
--- forM_ xs $ \(id) -> print id
+  let getAllHumansInOrganizationAction = runPostgresUserRepository $ getAllHumansInOrganization orgId
+  humans <- runReaderT getAllHumansInOrganizationAction env
+  print humans
+ where
+  userId = Id 1
+  orgId = Id 3
 
 -- void $ runStateT modifyAndPrint []

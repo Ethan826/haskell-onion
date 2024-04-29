@@ -1,5 +1,5 @@
 module Core.Id where
 
 newtype Id a
-  = Id Int
+  = Id {unId :: Int}
   deriving (Show, Eq, Ord)
