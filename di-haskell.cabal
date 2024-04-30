@@ -71,6 +71,7 @@ executable di-haskell
                     , Services.BankAccountRepository
                     , Providers.InMemoryBankAccountRepository
                     , Providers.PostgresUserRepositoryV1
+                    , Providers.PostgresUserRepositoryV2
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -84,6 +85,7 @@ executable di-haskell
                       , utf8-string
                       , raw-strings-qq
                       , dotenv
+                      , vector
 
     -- Directories containing source files.
     hs-source-dirs:   app

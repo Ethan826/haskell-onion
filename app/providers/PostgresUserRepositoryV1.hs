@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -22,6 +23,7 @@ import Core.Organization (Organization (..), OrganizationId)
 import Core.User (User (HumanUser, OrganizationUser), UserId (HumanId, OrganizationId))
 import Data.Maybe (listToMaybe)
 import Data.Text (Text, pack)
+import Data.Vector (Vector)
 import Database.PostgreSQL.Simple (
   Connection,
   FromRow,
@@ -67,19 +69,22 @@ instance FromRow DbOrganization
 
 type NameIdTuples = [(Text, Int)]
 
-organizationUserFromNameIdTuples :: NameIdTuples -> OrganizationId -> Maybe User
-organizationUserFromNameIdTuples tuples userId =
-  ( \orgName ->
-      OrganizationUser $
-        Organization
-          { organizationName = orgName
-          , organizationId = userId
-          , organizationHumanIds = Id . snd <$> tuples
-          }
-  )
-    <$> maybeOrgName
- where
-  maybeOrgName = fst <$> listToMaybe tuples
+-- organizationUserFromNameIdTuples :: NameIdTuples -> OrganizationId -> Maybe User
+-- organizationUserFromNameIdTuples tuples userId =
+--   ( \orgName ->
+--       OrganizationUser $
+--         Organization
+--           { organizationName = orgName
+--           , organizationId = userId
+--           , organizationHumanIds = Id . snd <$> tuples
+--           }
+--   )
+--     <$> maybeOrgName
+--  where
+--   maybeOrgName = fst <$> listToMaybe tuples
+
+-- Actual return value:
+-- 2	Engineers	{1,3,5,6,7,8,9}
 
 instance UserRepository PostgresUserRepositoryV1 where
   getUserById :: UserId -> PostgresUserRepositoryV1 (Maybe User)
@@ -91,17 +96,29 @@ instance UserRepository PostgresUserRepositoryV1 where
     queryString = "SELECT * FROM humans WHERE id = (?)"
   getUserById (OrganizationId userId) = do
     conn <- asks postgresConnection
-    result <- liftIO $ query conn queryString [unId userId]
-    pure $ organizationUserFromNameIdTuples result userId
+    result :: [(Int, Text, Vector Int)] <- liftIO $ query conn queryString [unId userId]
+    pure $
+      listToMaybe $
+        ( \(organizationId, organizationName, organizationHumanIds) ->
+            OrganizationUser $
+              Organization
+                { organizationId = Id organizationId
+                , organizationName
+                , organizationHumanIds = Id <$> organizationHumanIds
+                }
+        )
+          <$> result
    where
     queryString =
       [r|
-        SELECT o.name
-              , oh.human_id
+        SELECT o.id AS organization_id
+              , o.name AS organization_name
+              , ARRAY_AGG(oh.human_id) AS human_ids
         FROM organizations o
         INNER JOIN organization_humans oh
-                ON oh.organization_id = o.id
+        ON o.id = oh.organization_id
         WHERE o.id = (?)
+        GROUP BY o.id
       |]
 
   getAllHumansInOrganization ::

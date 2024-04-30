@@ -48,7 +48,7 @@ modifyAndPrint = runInMemoryBankAccountRepository $ do
 
 getPostgresEnv :: IO PostgresUserRepositoryV1Env
 getPostgresEnv = do
-  connString <- getEnv "POSTGRES_CONNECTION_STRING"
+  connString <- getEnv "POSTGRES_CONNECTION_STRING_V1"
   conn <- connectPostgreSQL $ fromString connString
   pure $
     PostgresUserRepositoryV1Env{postgresConnection = conn}
