@@ -83,6 +83,7 @@ executable di-haskell
                       , bytestring
                       , utf8-string
                       , raw-strings-qq
+                      , dotenv
 
     -- Directories containing source files.
     hs-source-dirs:   app

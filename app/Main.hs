@@ -1,11 +1,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
+import Configuration.Dotenv
+import Control.Monad.Reader (ReaderT (runReaderT))
+import Control.Monad.Trans
+import Core.BankAccount (
+  BankAccount (..),
+ )
 import Core.Id (Id (Id))
+import Core.User (UserId (HumanId, OrganizationId))
+import Providers.InMemoryBankAccountRepository (
+  InMemoryBankAccountAction,
+  InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
+ )
 import Providers.PostgresUserRepository (
   PostgresUserRepository (runPostgresUserRepository),
   PostgresUserRepositoryEnv (
@@ -13,21 +25,11 @@ import Providers.PostgresUserRepository (
     postgresUserRepositoryEnvConnectionString
   ),
  )
-
-import Control.Monad.Reader (ReaderT (runReaderT))
-import Control.Monad.Trans
-import Core.BankAccount (
-  BankAccount (..),
- )
-import Core.User (UserId (HumanId, OrganizationId))
-import Providers.InMemoryBankAccountRepository (
-  InMemoryBankAccountAction,
-  InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
- )
 import Services.BankAccountRepository (
   BankAccountRepository (..),
  )
 import Services.UserRepository (UserRepository (getAllHumansInOrganization, getUserById))
+import System.Environment (getEnv)
 
 someData :: BankAccount
 someData =
@@ -43,16 +45,19 @@ modifyAndPrint = runInMemoryBankAccountRepository $ do
   account <- getAccountById (Id 123)
   liftIO $ print account
 
--- TODO: Get from env
-env :: PostgresUserRepositoryEnv
-env =
-  PostgresUserRepositoryEnv
-    { postgresUserRepositoryEnvConnectionString =
-        "postgresql://ethan@localhost:5432/ethan"
-    }
+getPostgresEnv :: IO PostgresUserRepositoryEnv
+getPostgresEnv = do
+  postgresUserRepositoryEnvConnectionString <- getEnv "POSTGRES_CONNECTION_STRING"
+  pure $
+    PostgresUserRepositoryEnv
+      { postgresUserRepositoryEnvConnectionString
+      }
 
 main :: IO ()
 main = do
+  loadFile defaultConfig
+
+  env <- getPostgresEnv
   let getUserByIdAction = runPostgresUserRepository $ getUserById userId
   user <- runReaderT getUserByIdAction env
   print user
