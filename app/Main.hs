@@ -1,12 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import Configuration.Dotenv
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Monad.Reader (ReaderT (runReaderT))
 import Control.Monad.Trans
 import Core.BankAccount (
@@ -14,6 +13,8 @@ import Core.BankAccount (
  )
 import Core.Id (Id (Id))
 import Core.User (UserId (HumanId, OrganizationId))
+import Data.ByteString.UTF8 (fromString)
+import Database.PostgreSQL.Simple (connectPostgreSQL)
 import Providers.InMemoryBankAccountRepository (
   InMemoryBankAccountAction,
   InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
@@ -22,7 +23,7 @@ import Providers.PostgresUserRepository (
   PostgresUserRepository (runPostgresUserRepository),
   PostgresUserRepositoryEnv (
     PostgresUserRepositoryEnv,
-    postgresUserRepositoryEnvConnectionString
+    postgresConnection
   ),
  )
 import Services.BankAccountRepository (
@@ -47,11 +48,10 @@ modifyAndPrint = runInMemoryBankAccountRepository $ do
 
 getPostgresEnv :: IO PostgresUserRepositoryEnv
 getPostgresEnv = do
-  postgresUserRepositoryEnvConnectionString <- getEnv "POSTGRES_CONNECTION_STRING"
+  connString <- getEnv "POSTGRES_CONNECTION_STRING"
+  conn <- connectPostgreSQL $ fromString connString
   pure $
-    PostgresUserRepositoryEnv
-      { postgresUserRepositoryEnvConnectionString
-      }
+    PostgresUserRepositoryEnv{postgresConnection = conn}
 
 main :: IO ()
 main = do

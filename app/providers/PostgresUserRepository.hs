@@ -20,20 +20,18 @@ import Core.Human (Human (..))
 import Core.Id (Id (Id, unId))
 import Core.Organization (Organization (..), OrganizationId)
 import Core.User (User (HumanUser, OrganizationUser), UserId (HumanId, OrganizationId))
-import Data.ByteString.UTF8 (fromString)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text, pack)
 import Database.PostgreSQL.Simple (
   Connection,
   FromRow,
-  connectPostgreSQL,
   query,
  )
 import GHC.Generics (Generic)
 import Services.UserRepository (UserRepository (..))
 
 newtype PostgresUserRepositoryEnv = PostgresUserRepositoryEnv
-  { postgresUserRepositoryEnvConnectionString :: String
+  { postgresConnection :: Connection
   }
 
 type PostgresUserRepositoryAction a =
@@ -67,12 +65,6 @@ data DbOrganization = DbOrganization {dbOrganizationId :: Int, dbOrganizationNam
 
 instance FromRow DbOrganization
 
-getConn :: PostgresUserRepository Connection
-getConn = do
-  connString <- asks postgresUserRepositoryEnvConnectionString
-  -- I know we'd use a pool in real life
-  liftIO $ connectPostgreSQL $ fromString connString
-
 type NameIdTuples = [(Text, Int)]
 
 organizationUserFromNameIdTuples :: NameIdTuples -> OrganizationId -> Maybe User
@@ -92,13 +84,13 @@ organizationUserFromNameIdTuples tuples userId =
 instance UserRepository PostgresUserRepository where
   getUserById :: UserId -> PostgresUserRepository (Maybe User)
   getUserById (HumanId userId) = do
-    conn <- getConn
+    conn <- asks postgresConnection
     humans <- liftIO $ query conn queryString [unId userId]
     pure $ HumanUser . humanFromDbHuman <$> listToMaybe humans
    where
     queryString = "SELECT * FROM humans WHERE id = (?)"
   getUserById (OrganizationId userId) = do
-    conn <- getConn
+    conn <- asks postgresConnection
     result <- liftIO $ query conn queryString [unId userId]
     pure $ organizationUserFromNameIdTuples result userId
    where
@@ -116,7 +108,7 @@ instance UserRepository PostgresUserRepository where
     OrganizationId ->
     PostgresUserRepository [Human]
   getAllHumansInOrganization organizationId = do
-    conn <- getConn
+    conn <- asks postgresConnection
     humans :: [DbHuman] <- liftIO $ query conn queryString [unId organizationId]
     pure $ humanFromDbHuman <$> humans
    where
@@ -125,8 +117,8 @@ instance UserRepository PostgresUserRepository where
         SELECT h.*
         FROM organizations o
         INNER JOIN organization_humans oh
-            ON o.id = oh.organization_id
+                ON o.id = oh.organization_id
         INNER JOIN humans h
-            ON h.id = oh.human_id
+                ON h.id = oh.human_id
         WHERE o.id = (?);
       |]
