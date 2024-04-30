@@ -1,19 +1,13 @@
 module Core.BankAccount where
 
-import Core.Human (HumanId)
 import Core.Id (Id)
-import Core.Organization (OrganizationId)
+import Core.User (UserId)
 
 type BankAccountId = Id BankAccount
 
 data BankAccount = BankAccount
   { accountNumber :: BankAccountId
   , balanceCents :: Int
-  , bankAccountHolderId :: BankAccountHolderId
+  , bankAccountHolderId :: UserId
   }
-  deriving (Show, Eq)
-
-data BankAccountHolderId
-  = HumanId HumanId
-  | OrganizationId OrganizationId
   deriving (Show, Eq)

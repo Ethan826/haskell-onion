@@ -15,9 +15,9 @@ import Control.Monad.State (
 import Control.Monad.Trans
 import Core.BankAccount (
   BankAccount (..),
-  BankAccountHolderId,
   BankAccountId,
  )
+import Core.User (UserId)
 import Data.Foldable (find)
 import Services.BankAccountRepository (BankAccountRepository (..))
 
@@ -45,7 +45,7 @@ instance BankAccountRepository InMemoryBankAccountRepository where
     gets $ find ((== idToFind) . accountNumber)
 
   getAccountsForUser ::
-    BankAccountHolderId ->
+    UserId ->
     InMemoryBankAccountRepository [BankAccount]
   getAccountsForUser idToFind =
     gets (filter ((== idToFind) . bankAccountHolderId))

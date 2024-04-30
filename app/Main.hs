@@ -18,8 +18,8 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 import Control.Monad.Trans
 import Core.BankAccount (
   BankAccount (..),
-  BankAccountHolderId (HumanId),
  )
+import Core.User (UserId (HumanId, OrganizationId))
 import Providers.InMemoryBankAccountRepository (
   InMemoryBankAccountAction,
   InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
@@ -61,7 +61,7 @@ main = do
   humans <- runReaderT getAllHumansInOrganizationAction env
   print humans
  where
-  userId = Id 1
+  userId = OrganizationId $ Id 1
   orgId = Id 3
 
 -- void $ runStateT modifyAndPrint []
