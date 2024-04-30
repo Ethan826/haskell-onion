@@ -70,7 +70,7 @@ executable di-haskell
                     , Services.UserRepository
                     , Services.BankAccountRepository
                     , Providers.InMemoryBankAccountRepository
-                    , Providers.PostgresUserRepository
+                    , Providers.PostgresUserRepositoryV1
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

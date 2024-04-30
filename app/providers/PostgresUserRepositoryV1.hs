@@ -6,11 +6,11 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Providers.PostgresUserRepository (
-  PostgresUserRepository,
-  PostgresUserRepositoryAction,
-  PostgresUserRepositoryEnv (..),
-  runPostgresUserRepository,
+module Providers.PostgresUserRepositoryV1 (
+  PostgresUserRepositoryV1,
+  PostgresUserRepositoryV1Action,
+  PostgresUserRepositoryV1Env (..),
+  runPostgresUserRepositoryV1,
 ) where
 
 import Text.RawString.QQ (r)
@@ -30,21 +30,21 @@ import Database.PostgreSQL.Simple (
 import GHC.Generics (Generic)
 import Services.UserRepository (UserRepository (..))
 
-newtype PostgresUserRepositoryEnv = PostgresUserRepositoryEnv
+newtype PostgresUserRepositoryV1Env = PostgresUserRepositoryV1Env
   { postgresConnection :: Connection
   }
 
-type PostgresUserRepositoryAction a =
-  ReaderT PostgresUserRepositoryEnv IO a
+type PostgresUserRepositoryV1Action a =
+  ReaderT PostgresUserRepositoryV1Env IO a
 
-newtype PostgresUserRepository a = PostgresUserRepository
-  { runPostgresUserRepository :: PostgresUserRepositoryAction a
+newtype PostgresUserRepositoryV1 a = PostgresUserRepositoryV1
+  { runPostgresUserRepositoryV1 :: PostgresUserRepositoryV1Action a
   }
   deriving
     ( Functor
     , Applicative
     , Monad
-    , MonadReader PostgresUserRepositoryEnv
+    , MonadReader PostgresUserRepositoryV1Env
     , MonadIO
     )
 
@@ -81,8 +81,8 @@ organizationUserFromNameIdTuples tuples userId =
  where
   maybeOrgName = fst <$> listToMaybe tuples
 
-instance UserRepository PostgresUserRepository where
-  getUserById :: UserId -> PostgresUserRepository (Maybe User)
+instance UserRepository PostgresUserRepositoryV1 where
+  getUserById :: UserId -> PostgresUserRepositoryV1 (Maybe User)
   getUserById (HumanId userId) = do
     conn <- asks postgresConnection
     humans <- liftIO $ query conn queryString [unId userId]
@@ -106,7 +106,7 @@ instance UserRepository PostgresUserRepository where
 
   getAllHumansInOrganization ::
     OrganizationId ->
-    PostgresUserRepository [Human]
+    PostgresUserRepositoryV1 [Human]
   getAllHumansInOrganization organizationId = do
     conn <- asks postgresConnection
     humans :: [DbHuman] <- liftIO $ query conn queryString [unId organizationId]
