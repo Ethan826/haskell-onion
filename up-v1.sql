@@ -50,9 +50,13 @@ INSERT INTO organizations (name)
 
 WITH
   mercury_organization_id AS
-    (SELECT id FROM organizations WHERE name = 'Mercury' LIMIT 1)
+    (SELECT id 
+     FROM organizations 
+     WHERE name = 'Mercury' LIMIT 1)
   , mercury_ids AS
-    (SELECT id FROM humans WHERE name IN
+    (SELECT id 
+     FROM humans 
+     WHERE name IN
        ( 'Ethan Kent'
        , 'Brandon Shiaw'
        , 'Cam Kidman'
@@ -98,9 +102,14 @@ CROSS JOIN engineer_ids e;
 
 WITH
   product_organization_id AS
-    (SELECT id FROM organizations WHERE name = 'Product People' LIMIT 1)
+    (SELECT id
+     FROM organizations 
+     WHERE name = 'Product People' 
+     LIMIT 1)
   , product_ids AS
-    (SELECT id FROM humans WHERE name IN ('Brandon Shiaw'))
+    (SELECT id 
+     FROM humans 
+     WHERE name IN ('Brandon Shiaw'))
 INSERT INTO organization_humans
   ( organization_id
   , human_id
@@ -112,9 +121,14 @@ CROSS JOIN product_ids p;
 
 WITH
   management_organization_id AS
-    (SELECT id FROM organizations WHERE name = 'Managers' LIMIT 1)
+    (SELECT id
+     FROM organizations 
+     WHERE name = 'Managers' 
+     LIMIT 1)
   , management_ids AS
-    (SELECT id FROM humans WHERE name IN ('Corrine Olson'))
+    (SELECT id 
+     FROM humans 
+     WHERE name IN ('Corrine Olson'))
 INSERT INTO organization_humans
   ( organization_id
   , human_id
