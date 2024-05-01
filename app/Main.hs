@@ -19,10 +19,10 @@ import Providers.InMemoryBankAccountRepository (
   InMemoryBankAccountAction,
   InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
  )
-import Providers.PostgresUserRepositoryV1 (
-  PostgresUserRepositoryV1 (runPostgresUserRepositoryV1),
-  PostgresUserRepositoryV1Env (
-    PostgresUserRepositoryV1Env,
+import Providers.PostgresUserRepositoryV2 (
+  PostgresUserRepositoryV2 (runPostgresUserRepositoryV2),
+  PostgresUserRepositoryV2Env (
+    PostgresUserRepositoryV2Env,
     postgresConnection
   ),
  )
@@ -46,27 +46,27 @@ modifyAndPrint = runInMemoryBankAccountRepository $ do
   account <- getAccountById (Id 123)
   liftIO $ print account
 
-getPostgresEnv :: IO PostgresUserRepositoryV1Env
+getPostgresEnv :: IO PostgresUserRepositoryV2Env
 getPostgresEnv = do
-  connString <- getEnv "POSTGRES_CONNECTION_STRING_V1"
+  connString <- getEnv "POSTGRES_CONNECTION_STRING_V2"
   conn <- connectPostgreSQL $ fromString connString
   pure $
-    PostgresUserRepositoryV1Env{postgresConnection = conn}
+    PostgresUserRepositoryV2Env{postgresConnection = conn}
 
 main :: IO ()
 main = do
   loadFile defaultConfig
 
   env <- getPostgresEnv
-  let getUserByIdAction = runPostgresUserRepositoryV1 $ getUserById userId
+  let getUserByIdAction = runPostgresUserRepositoryV2 $ getUserById userId
   user <- runReaderT getUserByIdAction env
   print user
 
-  let getAllHumansInOrganizationAction = runPostgresUserRepositoryV1 $ getAllHumansInOrganization orgId
+  let getAllHumansInOrganizationAction = runPostgresUserRepositoryV2 $ getAllHumansInOrganization orgId
   humans <- runReaderT getAllHumansInOrganizationAction env
   print humans
  where
-  userId = OrganizationId $ Id 1
-  orgId = Id 3
+  userId = HumanId $ Id 1
+  orgId = Id 10
 
 -- void $ runStateT modifyAndPrint []
