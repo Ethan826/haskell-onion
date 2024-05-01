@@ -81,17 +81,17 @@ WITH
        AND discriminator = 'organization' LIMIT 1)
   , mercury_human_ids AS (
     SELECT id FROM users WHERE name IN 
-      (
-      , 'Ethan Kent'
+      ( 'Ethan Kent'
       , 'Brandon Shiaw'
       , 'Cam Kidman'
       , 'Corrine Olson'
       , 'Ethan Glasser-Camp'
       , 'Ivo Marjavonić'
-      , 'Jacob Nave',
+      , 'Jacob Nave'
       , 'Laurent Huberdeau'
       , 'Matt Long'
-    ) AND discriminator = 'human'
+      )
+    AND discriminator = 'human'
   )
 INSERT INTO organization_humans
   (organization_id

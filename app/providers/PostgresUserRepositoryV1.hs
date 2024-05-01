@@ -23,7 +23,7 @@ import Core.Organization (Organization (..), OrganizationId)
 import Core.User (User (HumanUser, OrganizationUser), UserId (HumanId, OrganizationId))
 import Data.Maybe (listToMaybe)
 import Data.Text (Text, pack)
-import Data.Vector (Vector)
+import Data.Vector (Vector, fromList)
 import Database.PostgreSQL.Simple (
   Connection,
   FromRow,
@@ -67,25 +67,6 @@ data DbOrganization = DbOrganization {dbOrganizationId :: Int, dbOrganizationNam
 
 instance FromRow DbOrganization
 
-type NameIdTuples = [(Text, Int)]
-
--- organizationUserFromNameIdTuples :: NameIdTuples -> OrganizationId -> Maybe User
--- organizationUserFromNameIdTuples tuples userId =
---   ( \orgName ->
---       OrganizationUser $
---         Organization
---           { organizationName = orgName
---           , organizationId = userId
---           , organizationHumanIds = Id . snd <$> tuples
---           }
---   )
---     <$> maybeOrgName
---  where
---   maybeOrgName = fst <$> listToMaybe tuples
-
--- Actual return value:
--- 2	Engineers	{1,3,5,6,7,8,9}
-
 instance UserRepository PostgresUserRepositoryV1 where
   getUserById :: UserId -> PostgresUserRepositoryV1 (Maybe User)
   getUserById (HumanId userId) = do
@@ -96,24 +77,26 @@ instance UserRepository PostgresUserRepositoryV1 where
     queryString = "SELECT * FROM humans WHERE id = (?)"
   getUserById (OrganizationId userId) = do
     conn <- asks postgresConnection
-    result :: [(Int, Text, Vector Int)] <- liftIO $ query conn queryString [unId userId]
-    pure $
-      listToMaybe $
-        ( \(organizationId, organizationName, organizationHumanIds) ->
-            OrganizationUser $
-              Organization
-                { organizationId = Id organizationId
-                , organizationName
-                , organizationHumanIds = Id <$> organizationHumanIds
-                }
-        )
-          <$> result
+    dbResult <- liftIO $ query conn queryString [unId userId]
+    pure $ (listToMaybe . (tupleToOrganization <$>)) dbResult
    where
+    tupleToOrganization :: (Int, Text, Vector Int) -> User
+    tupleToOrganization
+      ( organizationId
+        , organizationName
+        , organizationHumanIds
+        ) =
+        OrganizationUser $
+          Organization
+            { organizationId = Id organizationId
+            , organizationName
+            , organizationHumanIds = Id <$> organizationHumanIds
+            }
     queryString =
       [r|
         SELECT o.id AS organization_id
-              , o.name AS organization_name
-              , ARRAY_AGG(oh.human_id) AS human_ids
+               , o.name AS organization_name
+               , ARRAY_AGG(oh.human_id) AS human_ids
         FROM organizations o
         INNER JOIN organization_humans oh
         ON o.id = oh.organization_id
@@ -123,15 +106,16 @@ instance UserRepository PostgresUserRepositoryV1 where
 
   getAllHumansInOrganization ::
     OrganizationId ->
-    PostgresUserRepositoryV1 [Human]
+    PostgresUserRepositoryV1 (Vector Human)
   getAllHumansInOrganization organizationId = do
     conn <- asks postgresConnection
     humans :: [DbHuman] <- liftIO $ query conn queryString [unId organizationId]
-    pure $ humanFromDbHuman <$> humans
+    pure $ fromList $ humanFromDbHuman <$> humans
    where
     queryString =
       [r|
-        SELECT h.*
+        SELECT h.id
+               , h.name
         FROM organizations o
         INNER JOIN organization_humans oh
                 ON o.id = oh.organization_id
