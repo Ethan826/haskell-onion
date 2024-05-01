@@ -55,7 +55,7 @@ instance UserRepository PostgresUserRepositoryV2 where
     pure $ fromList $ humanFromDbHuman <$> humans
 
 newtype PostgresUserRepositoryV2Env = PostgresUserRepositoryV2Env
-  { postgresConnection :: Connection
+  { postgresConnectionV2 :: Connection
   }
 
 type PostgresUserRepositoryV2Action a =
@@ -143,5 +143,5 @@ runQuery ::
   q ->
   PostgresUserRepositoryV2 [r]
 runQuery q params = do
-  conn <- asks postgresConnection
+  conn <- asks postgresConnectionV2
   liftIO $ query conn q params
