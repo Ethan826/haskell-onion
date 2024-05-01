@@ -9,9 +9,9 @@
 module Providers.SqliteBankAccountRepository where
 
 import Control.Monad.Reader (MonadIO (liftIO), MonadReader, ReaderT, asks)
-import Core.BankAccount (BankAccount, BankAccountId)
+import Core.BankAccount (BankAccount (BankAccount, accountNumber, balanceCents, bankAccountUser), BankAccountId)
 import Core.Id (Id (Id, unId))
-import Core.User (UserId (HumanId))
+import Core.User (UserId (HumanId, OrganizationId))
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Database.SQLite.Simple (open, query)
@@ -30,17 +30,24 @@ instance BankAccountRepository SqliteBankAccountRepository where
           conn
           "SELECT balance_cents, user_id, user_type FROM accounts WHERE id = (?);"
           [unId accountId]
-
-    liftIO $ print result
-
     case listToMaybe result of
-      Just (cents, userId, userType) ->
-        case userType of
-          "human" -> do
-            maybeUser <- liftIO $ runGetUserById $ HumanId $ Id userId
-            liftIO $ print maybeUser
-            pure Nothing
-          _ -> pure Nothing
+      Just (cents, userId, userType) -> do
+        let userTypeToId = case userType of
+              "human" -> Just $ HumanId $ Id userId
+              "organization" -> Just $ OrganizationId $ Id userId
+              _ -> Nothing -- Should be an error
+        case userTypeToId of
+          Just userId' -> do
+            user <- liftIO $ runGetUserById userId'
+            pure $ createBankAccount <$> user
+          Nothing -> pure Nothing
+       where
+        createBankAccount user =
+          BankAccount
+            { accountNumber = accountId
+            , balanceCents = cents
+            , bankAccountUser = user
+            }
       Nothing -> pure Nothing
 
 data SqliteBankAccountRepositoryEnv = SqliteBankAccountRepositoryEnv
