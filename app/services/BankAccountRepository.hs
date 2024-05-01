@@ -4,9 +4,10 @@ import Core.BankAccount (
   BankAccount,
   BankAccountId,
  )
-import Core.User (UserId)
+
+-- import Core.User (UserId)
 
 class (Monad m) => BankAccountRepository m where
-  createAccount :: BankAccount -> m ()
+  -- createAccount :: BankAccount -> m ()
+  -- getAccountsForUser :: UserId -> m [BankAccount]
   getAccountById :: BankAccountId -> m (Maybe BankAccount)
-  getAccountsForUser :: UserId -> m [BankAccount]

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -7,51 +8,33 @@ module Main where
 
 import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Monad.Reader (ReaderT (runReaderT))
-import Control.Monad.Trans
-import Core.BankAccount (
-  BankAccount (..),
- )
 import Core.Id (Id (Id))
 import Core.User (UserId (HumanId, OrganizationId))
 import Data.ByteString.UTF8 (fromString)
 import Database.PostgreSQL.Simple (connectPostgreSQL)
-import Providers.InMemoryBankAccountRepository (
-  InMemoryBankAccountAction,
-  InMemoryBankAccountRepository (runInMemoryBankAccountRepository),
- )
 import Providers.PostgresUserRepositoryV1 (
   PostgresUserRepositoryV1 (runPostgresUserRepositoryV1),
-  PostgresUserRepositoryV1Env (
-    PostgresUserRepositoryV1Env,
-    postgresConnectionV1
-  ),
+  PostgresUserRepositoryV1Env (PostgresUserRepositoryV1Env, postgresConnectionV1),
+  createUserRepositoryV1Actions,
  )
 import Providers.PostgresUserRepositoryV2 (
   PostgresUserRepositoryV2 (runPostgresUserRepositoryV2),
-  PostgresUserRepositoryV2Env (
-    PostgresUserRepositoryV2Env,
-    postgresConnectionV2
+  PostgresUserRepositoryV2Env (..),
+ )
+import Providers.SqliteBankAccountRepository (
+  SqliteBankAccountRepository (runSqliteBankAccountRepository),
+  SqliteBankAccountRepositoryEnv (
+    SqliteBankAccountRepositoryEnv,
+    sqliteFileLocation,
+    userRepositoryActions
   ),
  )
-import Services.BankAccountRepository (
-  BankAccountRepository (..),
+import Services.BankAccountRepository (BankAccountRepository (getAccountById))
+import Services.UserRepository (
+  UserRepository (getAllHumansInOrganization, getUserById),
+  UserRepositoryActions,
  )
-import Services.UserRepository (UserRepository (getAllHumansInOrganization, getUserById))
 import System.Environment (getEnv)
-
-someData :: BankAccount
-someData =
-  BankAccount
-    { accountNumber = Id 123
-    , balanceCents = 10000
-    , bankAccountHolderId = HumanId $ Id 987
-    }
-
-modifyAndPrint :: InMemoryBankAccountAction ()
-modifyAndPrint = runInMemoryBankAccountRepository $ do
-  createAccount someData
-  account <- getAccountById (Id 123)
-  liftIO $ print account
 
 getPostgresEnvV1 :: IO PostgresUserRepositoryV1Env
 getPostgresEnvV1 = do
@@ -67,11 +50,23 @@ getPostgresEnvV2 = do
   pure $
     PostgresUserRepositoryV2Env{postgresConnectionV2 = conn}
 
+getSqliteBankAccountRepositoryEnv :: UserRepositoryActions -> SqliteBankAccountRepositoryEnv
+getSqliteBankAccountRepositoryEnv userRepositoryActions =
+  SqliteBankAccountRepositoryEnv
+    { sqliteFileLocation = "./accounts.db"
+    , userRepositoryActions
+    }
+
 main :: IO ()
 main = do
   loadFile defaultConfig
+
   envV1 <- getPostgresEnvV1
   envV2 <- getPostgresEnvV2
+
+  let accountsEnv = getSqliteBankAccountRepositoryEnv $ createUserRepositoryV1Actions envV1
+  let getAccountByIdAction = runSqliteBankAccountRepository $ getAccountById $ Id 1
+  runReaderT getAccountByIdAction accountsEnv >>= print
 
   putStrLn "Let's look up user 1 in V1"
 

@@ -7,16 +7,11 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Providers.PostgresUserRepositoryV1 (
-  PostgresUserRepositoryV1,
-  PostgresUserRepositoryV1Action,
-  PostgresUserRepositoryV1Env (..),
-  runPostgresUserRepositoryV1,
-) where
+module Providers.PostgresUserRepositoryV1 where
 
 import Text.RawString.QQ (r)
 
-import Control.Monad.Reader (MonadIO (liftIO), MonadReader, ReaderT, asks)
+import Control.Monad.Reader (MonadIO (liftIO), MonadReader, ReaderT (runReaderT), asks)
 import Core.Human (Human (..))
 import Core.Id (Id (Id, unId))
 import Core.Organization (Organization (..), OrganizationId)
@@ -32,10 +27,13 @@ import Database.PostgreSQL.Simple (
   query,
  )
 import GHC.Generics (Generic)
-import Services.UserRepository (UserRepository (..))
+import Services.UserRepository (
+  UserRepository (..),
+  UserRepositoryActions (..),
+ )
 
 ------------------------------------------------------------
--- Main export
+-- Main exports
 ------------------------------------------------------------
 
 instance UserRepository PostgresUserRepositoryV1 where
@@ -54,13 +52,6 @@ instance UserRepository PostgresUserRepositoryV1 where
     humans <- runQuery humansInOrganizationQuery [unId organizationId]
     pure $ fromList $ humanFromDbHuman <$> humans
 
-newtype PostgresUserRepositoryV1Env = PostgresUserRepositoryV1Env
-  { postgresConnectionV1 :: Connection
-  }
-
-type PostgresUserRepositoryV1Action a =
-  ReaderT PostgresUserRepositoryV1Env IO a
-
 newtype PostgresUserRepositoryV1 a = PostgresUserRepositoryV1
   { runPostgresUserRepositoryV1 :: PostgresUserRepositoryV1Action a
   }
@@ -71,6 +62,22 @@ newtype PostgresUserRepositoryV1 a = PostgresUserRepositoryV1
     , MonadReader PostgresUserRepositoryV1Env
     , MonadIO
     )
+
+createUserRepositoryV1Actions :: PostgresUserRepositoryV1Env -> UserRepositoryActions
+createUserRepositoryV1Actions env =
+  UserRepositoryActions
+    { runGetUserById = \userId ->
+        runReaderT (runPostgresUserRepositoryV1 (getUserById userId)) env
+    , runGetAllHumansInOrganization = \orgId ->
+        runReaderT (runPostgresUserRepositoryV1 (getAllHumansInOrganization orgId)) env
+    }
+
+newtype PostgresUserRepositoryV1Env = PostgresUserRepositoryV1Env
+  { postgresConnectionV1 :: Connection
+  }
+
+type PostgresUserRepositoryV1Action a =
+  ReaderT PostgresUserRepositoryV1Env IO a
 
 ------------------------------------------------------------
 -- SQL Queries

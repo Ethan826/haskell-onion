@@ -69,22 +69,23 @@ executable di-haskell
                     , Core.User
                     , Services.UserRepository
                     , Services.BankAccountRepository
-                    , Providers.InMemoryBankAccountRepository
                     , Providers.PostgresUserRepositoryV1
                     , Providers.PostgresUserRepositoryV2
+                    , Providers.SqliteBankAccountRepository
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1
-                      , mtl
-                      , text
-                      , postgresql-simple
                       , bytestring
-                      , utf8-string
-                      , raw-strings-qq
                       , dotenv
+                      , mtl
+                      , postgresql-simple
+                      , raw-strings-qq
+                      , sqlite-simple
+                      , text
+                      , utf8-string
                       , vector
 
     -- Directories containing source files.

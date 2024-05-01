@@ -7,12 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Providers.PostgresUserRepositoryV2 (
-  PostgresUserRepositoryV2,
-  PostgresUserRepositoryV2Action,
-  PostgresUserRepositoryV2Env (..),
-  runPostgresUserRepositoryV2,
-) where
+module Providers.PostgresUserRepositoryV2 where
 
 import Text.RawString.QQ (r)
 
